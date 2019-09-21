@@ -1,10 +1,21 @@
 = Knative + Kafka 
 
-== Installation
+== Prerequisites
 
-Assumes you have used try.openshift.com to create a cluster.  Here is a quick video that illustrates that process.
+Assumes you have used try.openshift.com to create an OCP 4.2 cluster.  Here is a quick video that illustrates that process.
 
 https://youtu.be/sK2SWH_m01Y
+
+CLI tools used:
+
+* kubectl
+* oc
+* jq
+* kafkacat
+* siege
+* watch 
+
+== Installation
 
 Using the OCP 4.x Administration Console - find OperatorHub and install
 
@@ -240,6 +251,13 @@ spec:
     spec:
       containers:
       - image: docker.io/burrsutter/myknativesink:1.0.0
+        resources:
+          requests: 
+            memory: "50Mi" 
+            cpu: "100m" 
+          limits:
+            memory: "50Mi"
+            cpu: "100m"       
         livenessProbe:
           httpGet:
             path: /healthz
@@ -258,6 +276,8 @@ kubectl get events --sort-by=.metadata.creationTimestamp
 ----
 
 You likely need to add another worker node (OpenShift Console - Compute - MachineSets)
+
+image::images/machinesets.png[Machinesets]
 
 == Create the KafkaSource that connects my-topic to ksvc 
 [source,bash]
@@ -326,10 +346,41 @@ image::images/hello_world_2.png[Sink pod is up]
 image::images/goodbye_world.png[one more message]
 
 
+== Scaling beyond 1 Pod
+
+Kafka-Producer is a simple little application that drives in 1, 10 or 100 messages as fast as it can.
+
+Deploy kafka-producer
+
+----
+cd kafka-producer
+kubectl apply -f Deployment.yml
+kubectl apply -f Service.yml
+oc expose service kafka-producer
+----
+
+
+Then drive some load
+----
+PRODUCER_URL="$(kubectl get route kafka-producer -ojson | jq -r .status.ingress[].host)"
+curl $PRODUCER_URL/100
+----
+
+Watch the Developer Topology view
+
+image::images/developer_topology.png[Developer View]
+
+image::images/developer_topology_during_auto_scale.png[Developer View]
+
+image::images/iterm_during_100.png[Terminal View]
+
 == Clean up
 
 [source,bash]
 ----
+kubectl delete route kafka-producer
+kubectl delete service kafka-producer
+kubectl delete deployment kafka-producer
 kubectl delete kafkasource mykafka-source
 kubectl delete ksvc myknativesink
 kubectl delete KafkaTopic my-topic
