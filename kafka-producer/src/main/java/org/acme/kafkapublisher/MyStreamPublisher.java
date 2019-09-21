@@ -61,5 +61,15 @@ public class MyStreamPublisher {
       }
       return "Sent 100";
     }    
+
+    @GET
+    @Path("/1000")
+    public String send1000() {
+      for (int i=0;i<1000;i++) {
+        emitter.send("{\"message\":\"spamming-" + cnt++ +"\"}");
+      }
+      return "Sent 1000";
+    }    
+ 
     
 }
