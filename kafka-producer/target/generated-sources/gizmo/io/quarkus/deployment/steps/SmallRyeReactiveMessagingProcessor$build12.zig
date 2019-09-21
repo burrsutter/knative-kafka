@@ -98,7 +98,7 @@ Method deploy_0 : V
     ALOAD 2
     LDC (Integer) 2
     AALOAD
-    ASTORE 8
+    ASTORE 10
     ALOAD 1
     LDC (String) "proxykey21"
     // Method descriptor: (Ljava/lang/String;)Ljava/lang/Object;
@@ -107,16 +107,16 @@ Method deploy_0 : V
     ALOAD 2
     LDC (Integer) 4
     AALOAD
-    ASTORE 10
+    ASTORE 8
     ALOAD 2
     LDC (Integer) 0
     AALOAD
     CHECKCAST io/quarkus/smallrye/reactivemessaging/runtime/SmallRyeReactiveMessagingRecorder
-    ALOAD 8
+    ALOAD 10
     CHECKCAST java/util/Map
     ALOAD 9
     CHECKCAST io/quarkus/arc/runtime/BeanContainer
-    ALOAD 10
+    ALOAD 8
     CHECKCAST java/util/List
     // Method descriptor: (Ljava/util/Map;Lio/quarkus/arc/runtime/BeanContainer;Ljava/util/List;)V
     INVOKEVIRTUAL io/quarkus/smallrye/reactivemessaging/runtime/SmallRyeReactiveMessagingRecorder#registerMediators
