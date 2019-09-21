@@ -236,7 +236,7 @@ spec:
   template:
     metadata:
       annotations:
-        autoscaling.knative.dev/target: "10"
+        autoscaling.knative.dev/target: "1"
     spec:
       containers:
       - image: docker.io/burrsutter/myknativesink:1.0.0
@@ -266,7 +266,7 @@ cat <<EOF | kubectl apply -f -
 apiVersion: sources.eventing.knative.dev/v1alpha1
 kind: KafkaSource
 metadata:
-  name: myknativesink-source
+  name: mykafka-source
 spec:
   consumerGroup: knative-group
   bootstrapServers: 52.151.244.188:9094 # <1>
@@ -278,7 +278,7 @@ spec:
 EOF
 ----
 
-<1> "bootstrapServers: 20.42.28.89:9094" comes from
+<1> "bootstrapServers: 52.151.244.188:9094" comes from
 
 ----
 kubectl get services my-cluster-kafka-external-bootstrap -ojson | jq -r .status.loadBalancer.ingress[0].ip 
@@ -289,12 +289,18 @@ kubectl get services my-cluster-kafka-external-bootstrap -ojson | jq -r .spec.po
 You can monitor the logs of mmyknativesink-source to see if it has connectivity issues
 
 ----
-stern mmyknativesink-source
+stern mykafka-source
 ----
 
 == Test
 
-Now push some messages in 
+Now push some messages in, must be in JSON format 
+
+----
+
+kafkacat -P -b $BOOTSTRAP_URL -t my-topic
+{"hello":"world"}
+----
 
 and you should see some logging output
 
@@ -307,11 +313,24 @@ kail -l serving.knative.dev/configuration=myknativesink -c user-container
 stern myknativesink
 ----
 
+----
+myknativesink-h6l7x-deployment-54d58c84c5-q9sm5 user-container EVENT: {"hello":"world"}
+----
+
+image::images/hello_world_1.png[Waiting]
+
+
+image::images/hello_world_2.png[Sink pod is up]
+
+
+image::images/goodbye_world.png[one more message]
+
+
 == Clean up
 
 [source,bash]
 ----
-kubectl delete kafkasource myknativesink-source
+kubectl delete kafkasource mykafka-source
 kubectl delete ksvc myknativesink
 kubectl delete KafkaTopic my-topic
 kubectl delete kafka my-cluster
