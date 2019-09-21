@@ -1,0 +1,319 @@
+= Knative + Kafka 
+
+== Installation
+
+Assumes you have used try.openshift.com to create a cluster.  Here is a quick video that illustrates that process.
+
+https://youtu.be/sK2SWH_m01Y
+
+Using the OCP 4.x Administration Console - find OperatorHub and install
+
+. Knative Serving
+. Knative Eventing
+. Knative Kafka
+. Strimzi 
+
+
+image::images/operatorhub_ui.png[OperatorHub inside of OpenShift Console]
+
+
+image::images/installed_operators.png[Installed Operators]
+
+
+You can check on your installed operators and their versions 
+
+----
+kubectl get csv
+NAME                               DISPLAY                         VERSION   REPLACES                           PHASE
+knative-eventing-operator.v0.7.1   Knative Eventing Operator       0.7.1     knative-eventing-operator.v0.6.0   Succeeded
+knative-kafka-operator.v0.7.1      Knative Apache Kafka Operator   0.7.1     knative-kafka-operator.v0.6.0      Succeeded
+knative-serving-operator.v0.7.1    Knative Serving Operator        0.7.1     knative-serving-operator.v0.6.0    Succeeded
+strimzi-cluster-operator.v0.13.0   Strimzi Apache Kafka Operator   0.13.0    strimzi-cluster-operator.v0.12.2   Succeeded
+----
+
+== Namespace/Project Setup
+[source,bash]
+----
+kubectl create namespace demo
+
+# make it "sticky"
+kubectl config set-context --current --namespace=demo
+
+# check that it is set
+kubectl config current-context
+
+# or use "oc" to see what the "sticky" namespace is
+oc project
+----
+
+
+== Create kafka cluster
+[source,bash]
+----
+cat <<EOF | kubectl apply -f -
+apiVersion: kafka.strimzi.io/v1beta1
+kind: Kafka
+metadata:
+  name: my-cluster
+spec:
+  kafka:
+    version: 2.3.0
+    replicas: 3
+    listeners:
+      plain: {}
+      tls: {}
+      external:
+        type: loadbalancer
+        tls: false      
+    config:
+      offsets.topic.replication.factor: 1
+      transaction.state.log.replication.factor: 1
+      transaction.state.log.min.isr: 1
+      log.message.format.version: "2.3"
+    storage:
+      type: jbod
+      volumes:
+      - id: 0
+        type: persistent-claim
+        size: 100Gi
+        deleteClaim: false
+  zookeeper:
+    replicas: 3
+    storage:
+      type: persistent-claim
+      size: 100Gi
+      deleteClaim: false
+  entityOperator:
+    topicOperator: {}
+    userOperator: {}
+EOF
+----
+
+
+== Configure the Knative Eventing Kafka
+
+Note: this only needs to be done one time
+[source,bash]
+----
+cat <<EOF | kubectl apply -n knative-eventing -f -
+apiVersion: eventing.knative.dev/v1alpha1
+kind: KnativeEventingKafka
+metadata:
+  name: knative-eventing-kafka
+  namespace: knative-eventing
+spec:
+  bootstrapServers: 'my-cluster-kafka-bootstrap.demo:9092'
+  setAsDefaultChannelProvisioner: false
+EOF
+----
+
+
+Verify the KnativeEventingKafka took affect
+
+[source,bash]
+----
+kubectl get crds | grep kafkasource
+kafkasources.sources.eventing.knative.dev                   2019-09-21T14:23:14Z
+----
+
+and
+
+[source,bash]
+----
+
+kubectl get pods -n knative-eventing
+
+eventing-controller-7777d5f457-c8vt9            1/1     Running   0          6h
+eventing-webhook-5ccd89b85f-g5mhd               1/1     Running   0          6h
+imc-controller-6557c99cf9-jphwl                 1/1     Running   0          6h
+imc-dispatcher-7fcc5d7c95-84fzz                 1/1     Running   0          6h
+in-memory-channel-controller-5d8f88dbd6-6wvmr   1/1     Running   0          6h
+in-memory-channel-dispatcher-c985bc47c-5p8cp    1/1     Running   0          6h
+kafka-ch-controller-6d57554949-fktzb            1/1     Running   0          3m2s
+kafka-ch-dispatcher-9bf48496d-vpjkc             1/1     Running   0          3m1s
+kafka-channel-controller-6cc67cccfd-x7xjg       1/1     Running   0          3m9s
+kafka-channel-dispatcher-854b7b97bc-m4pqk       1/1     Running   0          3m12s
+kafka-webhook-85dffd6b67-db8fd                  1/1     Running   0          3m1s
+sources-controller-69d6b8cddf-f44ck             1/1     Running   0          6h
+----
+
+
+== Create kafka topic
+
+[source,bash]
+----
+cat <<EOF | kubectl apply -f -
+apiVersion: kafka.strimzi.io/v1alpha1
+kind: KafkaTopic
+metadata:
+  name: my-topic
+  labels:
+    strimzi.io/cluster: my-cluster
+spec:
+  partitions: 100
+  replicas: 1
+EOF
+----
+
+
+Test to see if the topic was created correctly
+
+[source,bash]
+----
+oc exec -it -n demo -c kafka my-cluster-kafka-0 /bin/bash
+
+bin/kafka-topics.sh --zookeeper localhost:2181 --describe --topic my-topic
+----
+
+
+OR
+
+[source,bash]
+----
+kubectl exec -it -c kafka my-cluster-kafka-0 -- bin/kafka-topics.sh --zookeeper localhost:2181 --describe --topic my-topic
+
+OpenJDK 64-Bit Server VM warning: If the number of processors is expected to increase from one, then you should configure the number of parallel GC threads appropriately using -XX:ParallelGCThreads=N
+Topic:my-topic	PartitionCount:100	ReplicationFactor:1	Configs:message.format.version=2.3-IV1
+	Topic: my-topic	Partition: 0	Leader: 2	Replicas: 2	Isr: 2
+	Topic: my-topic	Partition: 1	Leader: 0	Replicas: 0	Isr: 0
+	Topic: my-topic	Partition: 2	Leader: 1	Replicas: 1	Isr: 1
+	Topic: my-topic	Partition: 3	Leader: 2	Replicas: 2	Isr: 2
+	Topic: my-topic	Partition: 4	Leader: 0	Replicas: 0	Isr: 0
+	Topic: my-topic	Partition: 5	Leader: 1	Replicas: 1	Isr: 1
+	Topic: my-topic	Partition: 6	Leader: 2	Replicas: 2	Isr: 2
+.
+.
+.
+----
+
+
+== Test connectivity to the kafka my-topic
+
+[source,bash]
+----
+export BOOTSTRAP_IP=$(kubectl get services my-cluster-kafka-external-bootstrap -ojson | jq -r .status.loadBalancer.ingress[0].ip)
+export BOOTSTRAP_PORT=$(kubectl get services my-cluster-kafka-external-bootstrap -ojson | jq -r .spec.ports[].port)
+export BOOTSTRAP_URL=$BOOTSTRAP_IP:$BOOTSTRAP_PORT
+----
+
+
+Then use Kafkacat to produce/consume messages
+[source,bash]
+----
+kafkacat -P -b $BOOTSTRAP_URL -t my-topic
+one
+two
+three
+----
+
+ctrl-z to end
+
+[source,bash]
+----
+kafkacat -C -b $BOOTSTRAP_URL -t my-topic 
+one
+% Reached end of topic my-topic [35] at offset 1
+two
+% Reached end of topic my-topic [81] at offset 1
+three
+% Reached end of topic my-topic [32] at offset 1
+----
+
+ctrl-c to end 
+
+== Deploy a Knative Service
+
+This is your "sink" that receives events
+
+[source,bash]
+----
+cat <<EOF | kubectl apply -f -
+apiVersion: serving.knative.dev/v1alpha1
+kind: Service
+metadata:
+  name: myknativesink
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/target: "10"
+    spec:
+      containers:
+      - image: docker.io/burrsutter/myknativesink:1.0.0
+        livenessProbe:
+          httpGet:
+            path: /healthz
+        readinessProbe:
+          httpGet:
+            path: /healthz    
+EOF
+----
+
+
+If your pod is stuck in PENDING, check your events
+
+[source,bash]
+----
+kubectl get events --sort-by=.metadata.creationTimestamp
+----
+
+You likely need to add another worker node (OpenShift Console - Compute - MachineSets)
+
+== Create the KafkaSource that connects my-topic to ksvc 
+[source,bash]
+----
+cat <<EOF | kubectl apply -f -
+apiVersion: sources.eventing.knative.dev/v1alpha1
+kind: KafkaSource
+metadata:
+  name: myknativesink-source
+spec:
+  consumerGroup: knative-group
+  bootstrapServers: 52.151.244.188:9094 # <1>
+  topics: my-topic
+  sink:
+    apiVersion: serving.knative.dev/v1alpha1
+    kind: Service
+    name: myknativesink
+EOF
+----
+
+<1> "bootstrapServers: 20.42.28.89:9094" comes from
+
+----
+kubectl get services my-cluster-kafka-external-bootstrap -ojson | jq -r .status.loadBalancer.ingress[0].ip 
+# and
+kubectl get services my-cluster-kafka-external-bootstrap -ojson | jq -r .spec.ports[].port
+----
+
+You can monitor the logs of mmyknativesink-source to see if it has connectivity issues
+
+----
+stern mmyknativesink-source
+----
+
+== Test
+
+Now push some messages in 
+
+and you should see some logging output
+
+[source,bash]
+----
+kubectl logs -l serving.knative.dev/configuration=myknativesink -c user-container
+# or
+kail -l serving.knative.dev/configuration=myknativesink -c user-container
+# or
+stern myknativesink
+----
+
+== Clean up
+
+[source,bash]
+----
+kubectl delete kafkasource myknativesink-source
+kubectl delete ksvc myknativesink
+kubectl delete KafkaTopic my-topic
+kubectl delete kafka my-cluster
+----
+
