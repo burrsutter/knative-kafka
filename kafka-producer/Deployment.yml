@@ -20,7 +20,7 @@ spec:
         imagePullPolicy: Always # because I am in development-mode
         env:
         - name: MP_MESSAGING_OUTGOING_MYSTREAM_BOOTSTRAP_SERVERS
-          value: 52.151.244.188:9094
+          value: ad702e291f1a411e9b6fb06483f3bee1-1186729386.eu-west-1.elb.amazonaws.com:9094
         ports:
           - containerPort: 8080
         resources:

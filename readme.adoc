@@ -67,8 +67,7 @@ kind: Kafka
 metadata:
   name: my-cluster
 spec:
-  kafka:
-    version: 2.3.0
+  kafka:    
     replicas: 3
     listeners:
       plain: {}
@@ -80,7 +79,6 @@ spec:
       offsets.topic.replication.factor: 1
       transaction.state.log.replication.factor: 1
       transaction.state.log.min.isr: 1
-      log.message.format.version: "2.3"
     storage:
       type: jbod
       volumes:
@@ -134,18 +132,20 @@ and
 
 kubectl get pods -n knative-eventing
 
-eventing-controller-7777d5f457-c8vt9            1/1     Running   0          6h
-eventing-webhook-5ccd89b85f-g5mhd               1/1     Running   0          6h
-imc-controller-6557c99cf9-jphwl                 1/1     Running   0          6h
-imc-dispatcher-7fcc5d7c95-84fzz                 1/1     Running   0          6h
-in-memory-channel-controller-5d8f88dbd6-6wvmr   1/1     Running   0          6h
-in-memory-channel-dispatcher-c985bc47c-5p8cp    1/1     Running   0          6h
-kafka-ch-controller-6d57554949-fktzb            1/1     Running   0          3m2s
-kafka-ch-dispatcher-9bf48496d-vpjkc             1/1     Running   0          3m1s
-kafka-channel-controller-6cc67cccfd-x7xjg       1/1     Running   0          3m9s
-kafka-channel-dispatcher-854b7b97bc-m4pqk       1/1     Running   0          3m12s
-kafka-webhook-85dffd6b67-db8fd                  1/1     Running   0          3m1s
-sources-controller-69d6b8cddf-f44ck             1/1     Running   0          6h
+NAME                                            READY   STATUS              RESTARTS   AGE
+eventing-controller-758d785bf7-wzq7v            1/1     Running             0          18m
+eventing-webhook-7ff46cd45f-5tz9z               1/1     Running             0          18m
+imc-controller-75d7f598df-b48bc                 1/1     Running             0          17m
+imc-dispatcher-77f565585c-xb5c8                 1/1     Running             0          17m
+in-memory-channel-controller-6b4967d97b-mlrdk   1/1     Running             0          18m
+in-memory-channel-dispatcher-8bbcd4f9-t2gbj     1/1     Running             0          17m
+kafka-ch-controller-5f55f4c58-9dm5j             0/1     ContainerCreating   0          11s
+kafka-ch-dispatcher-5655cc4c9f-xbhv7            0/1     ContainerCreating   0          10s
+kafka-channel-controller-578d46d7bd-fz6nf       0/1     ContainerCreating   0          19s
+kafka-channel-dispatcher-b49d4bc54-dhbp9        0/1     ContainerCreating   0          17s
+kafka-controller-manager-0                      0/1     ContainerCreating   0          20s
+kafka-webhook-7c96f59b7f-9hzd5                  0/1     ContainerCreating   0          10s
+sources-controller-788874d5fc-vl5mb             1/1     Running             0          18m
 ----
 
 
@@ -202,7 +202,7 @@ Topic:my-topic	PartitionCount:100	ReplicationFactor:1	Configs:message.format.ver
 
 [source,bash]
 ----
-export BOOTSTRAP_IP=$(kubectl get services my-cluster-kafka-external-bootstrap -ojson | jq -r .status.loadBalancer.ingress[0].ip)
+export BOOTSTRAP_IP=$(kubectl get services my-cluster-kafka-external-bootstrap -ojson | jq -r .status.loadBalancer.ingress[].hostname)
 export BOOTSTRAP_PORT=$(kubectl get services my-cluster-kafka-external-bootstrap -ojson | jq -r .spec.ports[].port)
 export BOOTSTRAP_URL=$BOOTSTRAP_IP:$BOOTSTRAP_PORT
 ----
@@ -301,7 +301,7 @@ EOF
 <1> "bootstrapServers: 52.151.244.188:9094" comes from
 
 ----
-kubectl get services my-cluster-kafka-external-bootstrap -ojson | jq -r .status.loadBalancer.ingress[0].ip 
+kubectl get services my-cluster-kafka-external-bootstrap -ojson | jq -r .status.loadBalancer.ingress[0].hostname
 # and
 kubectl get services my-cluster-kafka-external-bootstrap -ojson | jq -r .spec.ports[].port
 ----
@@ -363,7 +363,7 @@ oc expose service kafka-producer
 Then drive some load
 ----
 PRODUCER_URL="$(kubectl get route kafka-producer -ojson | jq -r .status.ingress[].host)"
-curl $PRODUCER_URL/100
+curl $PRODUCER_URL/1
 ----
 
 Watch the Developer Topology view
