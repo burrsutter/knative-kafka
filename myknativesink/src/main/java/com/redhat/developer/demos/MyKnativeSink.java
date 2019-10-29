@@ -30,6 +30,11 @@ public class MyKnativeSink {
   @Produces(MediaType.TEXT_PLAIN)
   public Response event(String event) {
     System.out.println("EVENT: " + event);
+    try { // adding some "processing time"
+      Thread.sleep(5000);
+    } catch (Exception e) {
+      System.out.println(e.toString());
+    }
     return Response.ok().build();
   }
 
