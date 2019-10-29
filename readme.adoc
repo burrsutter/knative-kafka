@@ -202,8 +202,14 @@ Topic:my-topic	PartitionCount:100	ReplicationFactor:1	Configs:message.format.ver
 
 [source,bash]
 ----
+# AWS
 export BOOTSTRAP_IP=$(kubectl get services my-cluster-kafka-external-bootstrap -ojson | jq -r .status.loadBalancer.ingress[].hostname)
+
+#Azure
+export BOOTSTRAP_IP=$(kubectl get services my-cluster-kafka-external-bootstrap -ojson | jq -r .status.loadBalancer.ingress[].ip)
+
 export BOOTSTRAP_PORT=$(kubectl get services my-cluster-kafka-external-bootstrap -ojson | jq -r .spec.ports[].port)
+
 export BOOTSTRAP_URL=$BOOTSTRAP_IP:$BOOTSTRAP_PORT
 ----
 
@@ -354,6 +360,7 @@ Deploy kafka-producer
 
 ----
 cd kafka-producer
+# update the Deployment.yml with the correct IP/Port $BOOTSTRAP_URL
 kubectl apply -f Deployment.yml
 kubectl apply -f Service.yml
 oc expose service kafka-producer
