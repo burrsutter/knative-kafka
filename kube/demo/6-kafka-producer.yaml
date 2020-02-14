@@ -1,9 +1,12 @@
+# file: kube/demo/6-kafka-producer.yaml
+---
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
   labels:
     app: kafka-producer
   name: kafka-producer
+  namespace: demo
 spec:
   replicas: 1
   selector:
@@ -13,6 +16,7 @@ spec:
     metadata:
       labels:
         app: kafka-producer
+        maistra.io/expose-route: 'true' # must be set or istio will block traffic 
     spec:
       containers:
       - name: kafka-producer
@@ -20,7 +24,7 @@ spec:
         imagePullPolicy: Always # because I am in development-mode
         env:
         - name: MP_MESSAGING_OUTGOING_MYSTREAM_BOOTSTRAP_SERVERS
-          value: 52.224.145.169:9094
+          value: my-cluster-kafka-external-bootstrap.demo:9094
         ports:
           - containerPort: 8080
         resources:
@@ -29,4 +33,34 @@ spec:
             cpu: "250m" 
           limits:
             memory: "100Mi"
-            cpu: "250m" 
+            cpu: "250m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kafka-producer
+  namespace: demo
+  labels:
+    app: kafka-producer
+spec:
+  type: LoadBalancer
+  ports:
+  - name: http
+    port: 80
+    targetPort: 8080
+  selector:
+    app: kafka-producer
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: kafka-producer
+  namespace: demo
+  labels:
+    app: kafka-producer
+spec:
+  to:
+    kind: Service
+    name: kafka-producer
+  port:
+    targetPort: http
