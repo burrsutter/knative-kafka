@@ -91,7 +91,7 @@ spec:
     storage:
       type: persistent-claim
       size: 100Gi
-      deleteClaim: false
+      deleteClaim: true
   entityOperator:
     topicOperator: {}
     userOperator: {}
