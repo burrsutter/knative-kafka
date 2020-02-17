@@ -31,7 +31,7 @@ image::images/operatorhub_ui.png[OperatorHub inside of OpenShift Console]
 image::images/installed_operators.png[Installed Operators]
 
 
-You can check on your installed operators and their versions 
+You can check on your installed operators and their versions: 
 
 ----
 kubectl get csv
@@ -40,6 +40,20 @@ knative-eventing-operator.v0.7.1   Knative Eventing Operator       0.7.1     kna
 knative-kafka-operator.v0.7.1      Knative Apache Kafka Operator   0.7.1     knative-kafka-operator.v0.6.0      Succeeded
 knative-serving-operator.v0.7.1    Knative Serving Operator        0.7.1     knative-serving-operator.v0.6.0    Succeeded
 strimzi-cluster-operator.v0.13.0   Strimzi Apache Kafka Operator   0.13.0    strimzi-cluster-operator.v0.12.2   Succeeded
+----
+
+NOTE: I have also used the following versions - OpenShift Serverless pulls in ElasticSearch, Jaeger, Kiali
+----
+kubectl get csv
+NAME                                        DISPLAY                          VERSION              REPLACES                            PHASE
+elasticsearch-operator.4.3.1-202002032140   Elasticsearch Operator           4.3.1-202002032140                                       Succeeded
+jaeger-operator.v1.13.1                     Jaeger Operator                  1.13.1                                                   Succeeded
+kiali-operator.v1.0.9                       Kiali Operator                   1.0.9                kiali-operator.v1.0.8               Succeeded
+knative-eventing-operator.v0.12.0           Knative Eventing Operator        0.12.0               knative-eventing-operator.v0.11.0   Succeeded
+knative-kafka-operator.v0.12.1              Knative Apache Kafka Operator    0.12.1               knative-kafka-operator.v0.11.2      Succeeded
+serverless-operator.v1.4.1                  OpenShift Serverless Operator    1.4.1                serverless-operator.v1.4.0          Succeeded
+servicemeshoperator.v1.0.7                  Red Hat OpenShift Service Mesh   1.0.7                servicemeshoperator.v1.0.6          Succeeded
+strimzi-cluster-operator.v0.15.0            Strimzi                          0.15.0               strimzi-cluster-operator.v0.14.0    Succeeded
 ----
 
 == Namespace/Project Setup
@@ -256,7 +270,7 @@ spec:
         autoscaling.knative.dev/target: "1"
     spec:
       containers:
-      - image: docker.io/burrsutter/myknativesink:1.0.0
+      - image: docker.io/burrsutter/myknativesink:1.0.1
         resources:
           requests: 
             memory: "50Mi" 
@@ -295,7 +309,7 @@ metadata:
   name: mykafka-source
 spec:
   consumerGroup: knative-group
-  bootstrapServers: 52.151.244.188:9094 # <1>
+  bootstrapServers: 52.185.212.83:9094 # <1>
   topics: my-topic
   sink:
     apiVersion: serving.knative.dev/v1alpha1
@@ -304,10 +318,15 @@ spec:
 EOF
 ----
 
-<1> "bootstrapServers: 52.151.244.188:9094" comes from
+<1> "bootstrapServers: 52.185.212.83:9094" comes from
 
 ----
+# AWS
 kubectl get services my-cluster-kafka-external-bootstrap -ojson | jq -r .status.loadBalancer.ingress[0].hostname
+#OR
+#Azure
+kubectl get services my-cluster-kafka-external-bootstrap -ojson | jq -r .status.loadBalancer.ingress[0].ip
+
 # and
 kubectl get services my-cluster-kafka-external-bootstrap -ojson | jq -r .spec.ports[].port
 ----
