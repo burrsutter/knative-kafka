@@ -31,7 +31,7 @@ public class MyKnativeSink {
   public Response event(String event) {
     System.out.println("EVENT: " + event);
     try { // adding some "processing time"
-      Thread.sleep(5000);
+      Thread.sleep(10000);
     } catch (Exception e) {
       System.out.println(e.toString());
     }
