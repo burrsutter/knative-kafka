@@ -1,0 +1,23 @@
+# file: kube/install/0-rh-operators.yaml
+---
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: serverless-operator
+  namespace: openshift-operators
+spec:
+  channel: techpreview
+  name: serverless-operator
+  source: redhat-operators
+  sourceNamespace: openshift-marketplace
+---
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: amq-streams
+  namespace: openshift-operators
+spec:
+  channel: stable
+  name: amq-streams
+  source: redhat-operators
+  sourceNamespace: openshift-marketplace

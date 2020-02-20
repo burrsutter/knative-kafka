@@ -1,0 +1,21 @@
+# file: kube/install/2-knative-cr.yaml
+---
+kind: Namespace
+apiVersion: v1
+metadata:
+  name: knative-serving
+spec: {}
+---
+apiVersion: operator.knative.dev/v1alpha1
+kind: KnativeServing
+metadata:
+  name: knative-serving
+  namespace: knative-serving
+spec: {}
+---
+apiVersion: eventing.knative.dev/v1alpha1
+kind: KnativeEventing
+metadata:
+  name: knative-eventing
+  namespace: knative-eventing
+spec: {}

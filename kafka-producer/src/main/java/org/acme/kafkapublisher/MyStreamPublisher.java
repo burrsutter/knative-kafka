@@ -1,15 +1,12 @@
 package org.acme.kafkapublisher;
 
-// import java.util.Random;
-import java.util.concurrent.TimeUnit;
+import io.smallrye.reactive.messaging.annotations.Channel;
+import io.smallrye.reactive.messaging.annotations.Emitter;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
-
-import io.smallrye.reactive.messaging.annotations.Emitter;
-import io.smallrye.reactive.messaging.annotations.Stream;
 
 @ApplicationScoped
 @Path("/")
@@ -17,59 +14,51 @@ public class MyStreamPublisher {
 
     int cnt = 0;
 
-    @Inject @Stream("mystream")
-    Emitter<String> emitter;
+    private final Emitter<String> emitter;
+
+    @Inject
+    MyStreamPublisher(@Channel("mystream") Emitter<String> emitter) {
+        this.emitter = emitter;
+    }
 
     @GET
     public String hello() {
-      return "I am ready, use /1, /10 or /100";
+        return "I am ready, use /1, /10 or /100";
     }
-    
+
     @GET
     @Path("/1")
     public String send1() {
-      
-      emitter.send("{\"message\":\"sending-" + cnt++ +"\"}");
-      return "Sent 1";
-
+        emitter.send("{\"message\":\"sending-" + cnt++ + "\"}");
+        return "Sent 1";
     }
-    
+
     @GET
     @Path("/10")
     public String send10() {
-      
-      emitter.send("{\"message\":\"spamming-" + cnt++ +"\"}");
-      emitter.send("{\"message\":\"spamming-" + cnt++ +"\"}");
-      emitter.send("{\"message\":\"spamming-" + cnt++ +"\"}");
-      emitter.send("{\"message\":\"spamming-" + cnt++ +"\"}");
-      emitter.send("{\"message\":\"spamming-" + cnt++ +"\"}");
-      emitter.send("{\"message\":\"spamming-" + cnt++ +"\"}");
-      emitter.send("{\"message\":\"spamming-" + cnt++ +"\"}");
-      emitter.send("{\"message\":\"spamming-" + cnt++ +"\"}");
-      emitter.send("{\"message\":\"spamming-" + cnt++ +"\"}");
-      emitter.send("{\"message\":\"spamming-" + cnt++ +"\"}");
-
-      return "Sent 10";
+        return send(10);
     }
 
 
     @GET
     @Path("/100")
     public String send100() {
-      for (int i=0;i<100;i++) {
-        emitter.send("{\"message\":\"spamming-" + cnt++ +"\"}");
-      }
-      return "Sent 100";
-    }    
+        return send(100);
+    }
 
     @GET
     @Path("/1000")
     public String send1000() {
-      for (int i=0;i<1000;i++) {
-        emitter.send("{\"message\":\"spamming-" + cnt++ +"\"}");
-      }
-      return "Sent 1000";
-    }    
- 
-    
+        return send(1000);
+    }
+
+    private String send(int num) {
+        for (int i = 0; i < num; i++) {
+            int eventNo = cnt++;
+            emitter.send("{\"message\":\"spamming-" + eventNo + "\"}");
+        }
+        return "Sent " + num;
+    }
+
+
 }

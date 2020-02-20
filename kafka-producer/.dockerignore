@@ -1,0 +1,5 @@
+target/**
+Dockerfile
+.idea/**
+*.iml
+.mvn/wrapper/maven-wrapper.jar

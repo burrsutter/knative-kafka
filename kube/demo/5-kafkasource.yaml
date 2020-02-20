@@ -1,0 +1,15 @@
+# file: kube/demo/5-kafkasource.yaml
+---
+apiVersion: sources.eventing.knative.dev/v1alpha1
+kind: KafkaSource
+metadata:
+  name: mykafka-source
+  namespace: demo
+spec:
+  consumerGroup: knative-group
+  bootstrapServers: my-cluster-kafka-external-bootstrap.demo:9094
+  topics: my-topic
+  sink:
+    apiVersion: serving.knative.dev/v1alpha1
+    kind: Service
+    name: myknativesink

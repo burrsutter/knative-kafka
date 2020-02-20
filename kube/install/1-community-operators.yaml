@@ -1,0 +1,23 @@
+# file: kube/install/1-community-operators.yaml
+---
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: knative-eventing-operator
+  namespace: openshift-operators
+spec:
+  channel: alpha
+  name: knative-eventing-operator
+  source: community-operators
+  sourceNamespace: openshift-marketplace
+---
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: knative-kafka-operator
+  namespace: openshift-operators
+spec:
+  channel: alpha
+  name: knative-kafka-operator
+  source: community-operators
+  sourceNamespace: openshift-marketplace

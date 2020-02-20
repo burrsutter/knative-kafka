@@ -1,0 +1,10 @@
+# file: kube/demo/2-kn-eventing-kafka.yaml
+---
+apiVersion: eventing.knative.dev/v1alpha1
+kind: KnativeEventingKafka
+metadata:
+  name: knative-eventing-kafka
+  namespace: knative-eventing
+spec:
+  bootstrapServers: my-cluster-kafka-external-bootstrap.demo:9094
+  setAsDefaultChannelProvisioner: false

@@ -1,0 +1,28 @@
+# file: kube/demo/4-ksvc-sink.yaml
+---
+apiVersion: serving.knative.dev/v1alpha1
+kind: Service
+metadata:
+  name: myknativesink
+  namespace: demo
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/target: "1"
+    spec:
+      containers:
+      - image: docker.io/burrsutter/myknativesink:1.0.1
+        resources:
+          requests: 
+            memory: "50Mi" 
+            cpu: "100m" 
+          limits:
+            memory: "50Mi"
+            cpu: "100m"       
+        livenessProbe:
+          httpGet:
+            path: /healthz
+        readinessProbe:
+          httpGet:
+            path: /healthz
