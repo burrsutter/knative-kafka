@@ -81,31 +81,23 @@ kind: Kafka
 metadata:
   name: my-cluster
 spec:
-  kafka:    
-    replicas: 3
+  kafka:
+    version: 2.5.0
+    replicas: 1
     listeners:
       plain: {}
       tls: {}
-      external:
-        type: loadbalancer
-        tls: false      
     config:
-      offsets.topic.replication.factor: 1
-      transaction.state.log.replication.factor: 1
-      transaction.state.log.min.isr: 1
+      offsets.topic.replication.factor: 3
+      transaction.state.log.replication.factor: 3
+      transaction.state.log.min.isr: 2
+      log.message.format.version: "2.5"
     storage:
-      type: jbod
-      volumes:
-      - id: 0
-        type: persistent-claim
-        size: 100Gi
-        deleteClaim: true
+      type: ephemeral
   zookeeper:
-    replicas: 3
+    replicas: 1
     storage:
-      type: persistent-claim
-      size: 100Gi
-      deleteClaim: true
+      type: ephemeral
   entityOperator:
     topicOperator: {}
     userOperator: {}
@@ -146,20 +138,15 @@ and
 
 kubectl get pods -n knative-eventing
 
-NAME                                            READY   STATUS              RESTARTS   AGE
-eventing-controller-758d785bf7-wzq7v            1/1     Running             0          18m
-eventing-webhook-7ff46cd45f-5tz9z               1/1     Running             0          18m
-imc-controller-75d7f598df-b48bc                 1/1     Running             0          17m
-imc-dispatcher-77f565585c-xb5c8                 1/1     Running             0          17m
-in-memory-channel-controller-6b4967d97b-mlrdk   1/1     Running             0          18m
-in-memory-channel-dispatcher-8bbcd4f9-t2gbj     1/1     Running             0          17m
-kafka-ch-controller-5f55f4c58-9dm5j             0/1     ContainerCreating   0          11s
-kafka-ch-dispatcher-5655cc4c9f-xbhv7            0/1     ContainerCreating   0          10s
-kafka-channel-controller-578d46d7bd-fz6nf       0/1     ContainerCreating   0          19s
-kafka-channel-dispatcher-b49d4bc54-dhbp9        0/1     ContainerCreating   0          17s
-kafka-controller-manager-0                      0/1     ContainerCreating   0          20s
-kafka-webhook-7c96f59b7f-9hzd5                  0/1     ContainerCreating   0          10s
-sources-controller-788874d5fc-vl5mb             1/1     Running             0          18m
+NAME                                        READY   STATUS    RESTARTS   AGE
+broker-controller-66f988fb6c-6wk4t          1/1     Running   0          20h
+eventing-controller-5c955d4694-btwx8        1/1     Running   0          20h
+eventing-webhook-7f7bcb8447-27p9s           1/1     Running   0          20h
+imc-controller-6ddf4477fd-bjjhh             1/1     Running   0          20h
+imc-dispatcher-7676c44559-wzxg4             1/1     Running   0          20h
+kafka-ch-controller-5497f498dc-vm8x7        1/1     Running   0          4h19m
+kafka-controller-manager-544887898b-j654v   1/1     Running   0          4h20m
+kafka-webhook-65d8bb899c-6nsmq              1/1     Running   0          4h19m
 ----
 
 
@@ -185,7 +172,7 @@ Test to see if the topic was created correctly
 
 [source,bash]
 ----
-oc exec -it -n demo -c kafka my-cluster-kafka-0 /bin/bash
+oc exec -it -c kafka my-cluster-kafka-0 /bin/bash
 
 bin/kafka-topics.sh --zookeeper localhost:2181 --describe --topic my-topic
 ----
@@ -211,47 +198,6 @@ Topic:my-topic	PartitionCount:100	ReplicationFactor:1	Configs:message.format.ver
 .
 ----
 
-
-== Test connectivity to the kafka my-topic
-
-[source,bash]
-----
-# AWS
-export BOOTSTRAP_IP=$(kubectl get services my-cluster-kafka-external-bootstrap -ojson | jq -r .status.loadBalancer.ingress[].hostname)
-
-#Azure
-export BOOTSTRAP_IP=$(kubectl get services my-cluster-kafka-external-bootstrap -ojson | jq -r .status.loadBalancer.ingress[].ip)
-
-export BOOTSTRAP_PORT=$(kubectl get services my-cluster-kafka-external-bootstrap -ojson | jq -r .spec.ports[].port)
-
-export BOOTSTRAP_URL=$BOOTSTRAP_IP:$BOOTSTRAP_PORT
-----
-
-
-Then use Kafkacat to produce/consume messages
-[source,bash]
-----
-kafkacat -P -b $BOOTSTRAP_URL -t my-topic
-one
-two
-three
-----
-
-ctrl-z to end
-
-[source,bash]
-----
-kafkacat -C -b $BOOTSTRAP_URL -t my-topic 
-one
-% Reached end of topic my-topic [35] at offset 1
-two
-% Reached end of topic my-topic [81] at offset 1
-three
-% Reached end of topic my-topic [32] at offset 1
-----
-
-ctrl-c to end 
-
 == Deploy a Knative Service
 
 This is your "sink" that receives events
@@ -268,6 +214,7 @@ spec:
     metadata:
       annotations:
         autoscaling.knative.dev/target: "1"
+        autoscaling.knative.dev/window: 60s
     spec:
       containers:
       - image: docker.io/burrsutter/myknativesink:1.0.1
@@ -303,64 +250,32 @@ image::images/machinesets.png[Machinesets]
 [source,bash]
 ----
 cat <<EOF | kubectl apply -f -
-apiVersion: sources.eventing.knative.dev/v1alpha1
+apiVersion: sources.knative.dev/v1alpha1
 kind: KafkaSource
 metadata:
   name: mykafka-source
 spec:
   consumerGroup: knative-group
-  bootstrapServers: 52.185.212.83:9094 # <1>
-  topics: my-topic
+  bootstrapServers: 
+   - my-cluster-kafka-bootstrap.kyper:9092
+  topics: 
+   - my-topic
   sink:
-    apiVersion: serving.knative.dev/v1alpha1
-    kind: Service
-    name: myknativesink
+    ref:
+      apiVersion: serving.knative.dev/v1
+      kind: Service
+      name: myknativesink
 EOF
 ----
 
-<1> "bootstrapServers: 52.185.212.83:9094" comes from
+
+You can monitor the logs of kafkasource-mykafka-source to see if it has connectivity issues
 
 ----
-# AWS
-kubectl get services my-cluster-kafka-external-bootstrap -ojson | jq -r .status.loadBalancer.ingress[0].hostname
-#OR
-#Azure
-kubectl get services my-cluster-kafka-external-bootstrap -ojson | jq -r .status.loadBalancer.ingress[0].ip
-
-# and
-kubectl get services my-cluster-kafka-external-bootstrap -ojson | jq -r .spec.ports[].port
-----
-
-You can monitor the logs of mmyknativesink-source to see if it has connectivity issues
-
-----
-stern mykafka-source
+stern kafkasource-mykafka-source
 ----
 
 == Test
-
-Now push some messages in, must be in JSON format 
-
-----
-
-kafkacat -P -b $BOOTSTRAP_URL -t my-topic
-{"hello":"world"}
-----
-
-and you should see some logging output
-
-[source,bash]
-----
-kubectl logs -l serving.knative.dev/configuration=myknativesink -c user-container
-# or
-kail -l serving.knative.dev/configuration=myknativesink -c user-container
-# or
-stern myknativesink
-----
-
-----
-myknativesink-h6l7x-deployment-54d58c84c5-q9sm5 user-container EVENT: {"hello":"world"}
-----
 
 image::images/hello_world_1.png[Waiting]
 
@@ -379,7 +294,7 @@ Deploy kafka-producer
 
 ----
 cd kafka-producer
-# update the Deployment.yml with the correct IP/Port $BOOTSTRAP_URL
+# update the Deployment.yml with the correct IP/Port/Namespace 
 kubectl apply -f Deployment.yml
 kubectl apply -f Service.yml
 oc expose service kafka-producer

@@ -1,4 +1,4 @@
-apiVersion: extensions/v1beta1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
@@ -20,7 +20,7 @@ spec:
         imagePullPolicy: Always # because I am in development-mode
         env:
         - name: MP_MESSAGING_OUTGOING_MYSTREAM_BOOTSTRAP_SERVERS
-          value: 52.224.145.169:9094
+          value: my-cluster-kafka-bootstrap.kyper:9092
         ports:
           - containerPort: 8080
         resources:
