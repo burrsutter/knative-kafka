@@ -59,10 +59,10 @@ strimzi-cluster-operator.v0.15.0            Strimzi                          0.1
 == Namespace/Project Setup
 [source,bash]
 ----
-kubectl create namespace demo
+kubectl create namespace kafka
 
 # make it "sticky"
-kubectl config set-context --current --namespace=demo
+kubectl config set-context --current --namespace=kakfa
 
 # check that it is set
 kubectl config current-context
@@ -83,7 +83,7 @@ metadata:
 spec:
   kafka:
     version: 2.5.0
-    replicas: 1
+    replicas: 3
     listeners:
       plain: {}
       tls: {}
@@ -95,7 +95,7 @@ spec:
     storage:
       type: ephemeral
   zookeeper:
-    replicas: 1
+    replicas: 3
     storage:
       type: ephemeral
   entityOperator:
@@ -117,11 +117,12 @@ metadata:
   name: knative-eventing-kafka
   namespace: knative-eventing
 spec:
-  bootstrapServers: 'my-cluster-kafka-bootstrap.demo:9092'
+  bootstrapServers: 'my-cluster-kafka-bootstrap.kafka:9092'
   setAsDefaultChannelProvisioner: false
 EOF
 ----
 
+Note: the namespace of "kafka" likely
 
 Verify the KnativeEventingKafka took affect
 
@@ -223,7 +224,7 @@ spec:
             memory: "50Mi" 
             cpu: "100m" 
           limits:
-            memory: "50Mi"
+            memory: "70Mi"
             cpu: "100m"       
         livenessProbe:
           httpGet:
@@ -257,7 +258,7 @@ metadata:
 spec:
   consumerGroup: knative-group
   bootstrapServers: 
-   - my-cluster-kafka-bootstrap.kyper:9092
+   - my-cluster-kafka-bootstrap.kafka:9092
   topics: 
    - my-topic
   sink:
@@ -288,23 +289,25 @@ image::images/goodbye_world.png[one more message]
 
 == Scaling beyond 1 Pod
 
-Kafka-Producer is a simple little application that drives in 1, 10 or 100 messages as fast as it can.
+Kafka Spammer is a simple little application that drives in N messages as fast as it can.
 
-Deploy kafka-producer
+Deploy
 
 ----
-cd kafka-producer
-# update the Deployment.yml with the correct IP/Port/Namespace 
-kubectl apply -f Deployment.yml
-kubectl apply -f Service.yml
-oc expose service kafka-producer
+kubectl -n kafka run kafka-spammer \
+--image=quay.io/rhdevelopers/kafkaspammer:1.0.2
 ----
 
 
-Then drive some load
+Exec into the Spammer
 ----
-PRODUCER_URL="$(kubectl get route kafka-producer -ojson | jq -r .status.ingress[].host)"
-curl $PRODUCER_URL/1
+KAFKA_SPAMMER_POD=$(kubectl -n kafka get pod -l "run=kafka-spammer" \
+-o jsonpath='{.items[0].metadata.name}')
+kubectl -n kafka exec -it $KAFKA_SPAMMER_POD -- /bin/sh
+----
+
+----
+curl localhost:8080/1
 ----
 
 Watch the Developer Topology view
