@@ -215,7 +215,7 @@ spec:
     metadata:
       annotations:
         autoscaling.knative.dev/target: "1"
-        autoscaling.knative.dev/window: 60s
+        autoscaling.knative.dev/window: 16s
     spec:
       containers:
       - image: docker.io/burrsutter/myknativesink:1.0.1
