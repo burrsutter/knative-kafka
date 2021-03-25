@@ -173,9 +173,11 @@ Test to see if the topic was created correctly
 
 [source,bash]
 ----
-oc exec -it -c kafka my-cluster-kafka-0 /bin/bash
+oc exec -n kafka -it my-cluster-zookeeper-0 -- /bin/bash
 
-bin/kafka-topics.sh --zookeeper localhost:2181 --describe --topic my-topic
+bin/kafka-topics.sh --zookeeper localhost:12181 --list
+
+bin/kafka-topics.sh --zookeeper localhost:12181 --describe --topic my-topic
 ----
 
 
@@ -183,7 +185,7 @@ OR
 
 [source,bash]
 ----
-kubectl exec -it -c kafka my-cluster-kafka-0 -- bin/kafka-topics.sh --zookeeper localhost:2181 --describe --topic my-topic
+kubectl exec -n kafka -it my-cluster-zookeeper-0 -- bin/kafka-topics.sh --zookeeper localhost:12181 --describe --topic my-topic
 
 OpenJDK 64-Bit Server VM warning: If the number of processors is expected to increase from one, then you should configure the number of parallel GC threads appropriately using -XX:ParallelGCThreads=N
 Topic:my-topic	PartitionCount:100	ReplicationFactor:1	Configs:message.format.version=2.3-IV1
