@@ -253,7 +253,7 @@ image::images/machinesets.png[Machinesets]
 [source,bash]
 ----
 cat <<EOF | kubectl apply -f -
-apiVersion: sources.knative.dev/v1alpha1
+apiVersion: sources.knative.dev/v1beta1
 kind: KafkaSource
 metadata:
   name: mykafka-source
