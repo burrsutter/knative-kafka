@@ -208,7 +208,7 @@ This is your "sink" that receives events
 [source,bash]
 ----
 cat <<EOF | kubectl apply -f -
-apiVersion: serving.knative.dev/v1alpha1
+apiVersion: serving.knative.dev/v1
 kind: Service
 metadata:
   name: myknativesink
