@@ -76,7 +76,7 @@ oc project
 [source,bash]
 ----
 cat <<EOF | kubectl apply -f -
-apiVersion: kafka.strimzi.io/v1beta1
+apiVersion: kafka.strimzi.io/v1beta2
 kind: Kafka
 metadata:
   name: my-cluster
