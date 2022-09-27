@@ -118,16 +118,32 @@ EOF
 Note: this only needs to be done one time
 [source,bash]
 ----
-cat <<EOF | kubectl apply -n knative-eventing -f -
-apiVersion: eventing.knative.dev/v1alpha1
-kind: KnativeEventingKafka
+apiVersion: operator.serverless.openshift.io/v1alpha1
+kind: KnativeKafka
 metadata:
-  name: knative-eventing-kafka
+  finalizers:
+    - knative-kafka-openshift
+  name: knative-kafka
   namespace: knative-eventing
 spec:
-  bootstrapServers: 'my-cluster-kafka-bootstrap.kafka:9092'
-  setAsDefaultChannelProvisioner: false
-EOF
+  broker:
+    defaultConfig:
+      authSecretName: ''
+      bootstrapServers: 'my-cluster-kafka-bootstrap.kafka:9092'
+      numPartitions: 10
+      replicationFactor: 3
+    enabled: true
+  channel:
+    authSecretName: ''
+    authSecretNamespace: ''
+    bootstrapServers: 'my-cluster-kafka-bootstrap.kafka:9092'
+    enabled: false
+  high-availability:
+    replicas: 1
+  sink:
+    enabled: false
+  source:
+    enabled: true
 ----
 
 Note: the namespace of "kafka" likely
